@@ -1,0 +1,126 @@
+#How to build and deploy REST API service with GO on Ubuntu 16.04
+
+###Introduction
+**RE**presentational **S**tate **T**ransfer - REST , is the most popular internet architecture. Founded on its well 
+defined ease of use,many modern websites and web services are basing their designs on top of REST.Popular
+web programming languages like PHP and Python have a mechanism of allowing developers build REST services.
+In this tutorial we will walk through how to build a REST API service with [Go](https://golang.org). We are going
+to learn how to :
+* Build a server and log HTTP requests.
+* Connect to a SQL database for data persistance.
+* Respond to API call in JSON
+* Deploy the server with the help of systemd service management.
+
+## Prerequisites
+This tutorial assumes that ;
+* You have access to an Ubuntu 16.04 with a non-root user with ```sudo``` privileges.
+* You have installed Nginx in your system. If not please follow [this tutorial](https://www.digitalocean.com/community/tutorials/how-to-install-nginx-on-ubuntu-16-04) 
+  
+
+## Step 1 — Installing HTTPie and Go
+In this step we are going to install HTTPie and Go insto our system.
+<$>[note]
+While curl will accompolish what we want,I prefer HTTPie because of it easy use and syntax.
+<$>
+
+Let begin by connecting to out server via ```ssh``
+
+```command
+ssh <^>sammy<^>@<^>your_server_ip<^>
+```
+
+Then run 
+
+```command
+sudo apt-get update
+sudo apt-get install httpie
+```
+
+Excellent. Before downloading Go,head to the offical [Go download page](https://golang.org/dl/). You will see different
+versions of Go tarball. To download Go run
+
+```command
+cd ~
+http --download https://storage.googleapis.com/golang/<^>go1.8.1.linux-amd64.tar.gz<^>
+```
+Notice that we are using version <^>1.8.1<^> which is the latest stable version at the time of this writing.
+
+Next lets extract and move Go to its appropriate directory
+
+```command
+tar xvf go1.6.linux-amd64.tar.gz
+sudo chown -R root:root ./go
+sudo mv go /usr/local
+```
+To finish up with Go installation we need set the paths for the root and where out Go source code will live.First,we
+create four directories.
+
+```command
+sudo mkdir goapp
+cd goapp
+sudo mkdir bin
+sudo mkdir pkg
+sudo mkdir src
+```
+Go has a strict philosophy on how source code should be organized. The created directories will be where we will be 
+working from especially the <^>src<^> folder.
+
+Let us now edit our paths. Run
+
+```command
+sudo nano ~/.profile
+```
+
+Then add the following lines
+
+```command
+export GOPATH=$HOME/goapp
+export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
+```
+ Save and refresh the profile by running 
+
+ ```command
+ source ~/.profile
+ ```
+
+ To ensure everything sets up correctly,we will do a reboot of our system. This is not absolutely neccassary but I
+ prefer to reboot when I install software that require paths edits.
+
+ ```command
+ sudo reboot
+ ```
+
+ Once the reboot is complete,you can test your Go installation by running
+
+ ```command
+ go env
+ ```
+
+ This should output the correctly set ```GOROOT`` and ```GOPATH``` paths.
+
+ ## Step 1 — Building the server
+ Lets create a directory inside ```~/goapp/src``` which will be our app directory. We will name our folder ```rest```
+
+ ```command
+ cd ~/goapp/src
+ sudo mkdir rest
+ cd rest
+ ```
+ Inside our app directory,we will create a go file,named ```main.goo``` which will the main entry point of our app Then
+ open it using ```nano```
+
+ ```command
+ touch main.go
+ sudo nano main.go
+ ```
+  
+
+
+
+
+ 
+
+
+
+
+

@@ -1,0 +1,5 @@
+[Unit]
+Description = Digital Ocean Web App service
+
+[Service]
+ExecStart=/home/goapp/src/api/main.go
