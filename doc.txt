@@ -20,10 +20,10 @@ This tutorial assumes that ;
 ## Step 1 — Installing HTTPie and Go
 In this step we are going to install HTTPie and Go insto our system.
 <$>[note]
-While curl will accompolish what we want,I prefer HTTPie because of it easy use and syntax.
+While ``curl`` will accomplish what we want,I prefer HTTPie because of it easy use and syntax.
 <$>
 
-Let begin by connecting to out server via ```ssh``
+Let begin by connecting to out server via ```ssh```
 
 ```command
 ssh <^>sammy<^>@<^>your_server_ip<^>
@@ -36,8 +36,7 @@ sudo apt-get update
 sudo apt-get install httpie
 ```
 
-Excellent. Before downloading Go,head to the offical [Go download page](https://golang.org/dl/). You will see different
-versions of Go tarball. To download Go run
+Excellent. Before downloading, go head to the offical [Go download page](https://golang.org/dl/). You will see different versions of Go tarball. To download Go run
 
 ```command
 cd ~
@@ -45,15 +44,14 @@ http --download https://storage.googleapis.com/golang/<^>go1.8.1.linux-amd64.tar
 ```
 Notice that we are using version <^>1.8.1<^> which is the latest stable version at the time of this writing.
 
-Next lets extract and move Go to its appropriate directory
+Next, lets extract and move Go to its appropriate directory
 
 ```command
 tar xvf go1.6.linux-amd64.tar.gz
 sudo chown -R root:root ./go
 sudo mv go /usr/local
 ```
-To finish up with Go installation we need set the paths for the root and where out Go source code will live.First,we
-create four directories.
+To finish up with Go installation we need to set the paths for the root and where our Go source code will live.First,we create four directories.
 
 ```command
 sudo mkdir goapp
@@ -62,8 +60,7 @@ sudo mkdir bin
 sudo mkdir pkg
 sudo mkdir src
 ```
-Go has a strict philosophy on how source code should be organized. The created directories will be where we will be 
-working from especially the <^>src<^> folder.
+Go has a strict philosophy on how source code should be organized. The created directories will be where we will be working from especially the <^>**src**<^> folder.
 
 Let us now edit our paths. Run
 
@@ -83,8 +80,7 @@ export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
  source ~/.profile
  ```
 
- To ensure everything sets up correctly,we will do a reboot of our system. This is not absolutely neccassary but I
- prefer to reboot when I install software that require paths edits.
+ To ensure everything sets up correctly,we will do a reboot of our system. This is not  neccassary but I prefer to reboot when I install software that require paths edits.
 
  ```command
  sudo reboot
@@ -96,9 +92,10 @@ export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
  go env
  ```
 
- This should output the correctly set ```GOROOT`` and ```GOPATH``` paths.
+ This should output the correctly set ```GOROOT``` and ```GOPATH``` paths.
 
- ## Step 2 — Building the app
+
+## Step 2 — Building the app
 
  Our app will expose simple CRUD routes. 
 
@@ -109,14 +106,13 @@ export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
  sudo mkdir rest
  cd rest
  ```
- Inside our app directory,we will create a go file,named ```main.goo``` which will the main entry point of our app Then
- open it using ```nano```
+ Inside our app directory,we will create a go file,named ```main.go``` which will the main entry point of our app then open it using ```nano```
 
  ```command
  touch main.go
  sudo nano main.go
  ```
-First we begin by settting up the usuall go app structure and importing important third-party libraries
+First we begin by settting up the usual Go app structure and importing important third-party libraries
 
  ```
  package main
@@ -146,7 +142,7 @@ go get github.com/mattn/go-sqlite3
 
 ```
 <$>[note]
-Remember to Save and quite from nano before installing the libraries
+**Note** Remember to Save and quite from nano before installing the libraries.
 <$>
 
 With the libraries installed,re-open ```main.go```
@@ -283,7 +279,7 @@ func errorChecker(e error) {
 }
 ```
 
-The app has functional structures,now we need to add data structure and variable that the functions use. Add the
+The app has functional structures,now we need to add data structure and variables that the functions use. Add the
 follow code.
 
 ```
@@ -315,7 +311,7 @@ type ResponseBox struct {
 }
 ```
 
-Wonderful. Let the an ```init()``` function which will initialize our app.
+Wonderful. Next is  an ```init()``` function which will initialize our app.
 
 ```
 func init() {
@@ -330,21 +326,19 @@ func init() {
 
 ```
 
-Before we continue to the next step,we need to understand what our app does.
+***Before we continue to the next step,we need to understand what our app is doing***
 
-Before the ```main()``` function is called, ```init()``` starts by opening a SQLite database and create a ```people```
-table which is used to store an individuals information. On succuss, it set the variable ```DB``` to be an instance
-of the database so that it can be accessed globally. The ```main()``` function is then called which registers all routes,
-handlers and starts a server that listens at port ``` :8000```. It always creates a ```logFile``` which is used
-by middleware handler function to write request logs. Handlers essentiall access the database and return their response
-in JSON.
+* Before the ```main()``` function is called, ```init()``` starts by opening a SQLite database and create a ```people```
+table which is used to store an individuals information.
+* On success, it sets the variable ```DB``` to  an instance of the database so that it can be accessed globally. 
+* The ```main()``` function is then called which registers all routes,handlers and starts a server that listens at port ``` :8000```. 
+* It also creates a ```logFile``` which is used by middleware handler function to write request logs. 
+* Route handlers essentially access the database and return a JSON formatted response.
 
 Great. The app is done.
 
 ## Step 3 — Automating deployment
-For our app to run, we have to run ```go run main.go``` everytime. This is obviously not ideal. We need a may to start
-the app automatically exposing its functions. To accompolish this,we will first need to create a bash script that we be
-responsible for calling the Go app.
+For our app to run, we have to run ```go run main.go``` everytime. This is obviously not ideal. We need a way to start the app automatically exposing its functions. To accomplish this,we will first need to create a bash script that we be responsible for calling the Go app.
 
 ```
 touch app.sh
@@ -364,7 +358,7 @@ do
     esac        
 done
 ```
-The script basically reads the current working directory,finds the ```main.go``` file and run the command to start it.
+The script basically reads the current working directory,finds the ```main.go``` file and runs the command to start it.
 
 Next, we need to create a service that we start the app after boot.
 
@@ -385,7 +379,7 @@ ExecStart=/home/goapp/src/rest/app.sh
 WantedBy = multi-user.target
 
 ```
-Now we need to move the service file into ``` /lib/systemd/system``` where startup services live.
+Now we need to move the service file into ``` /lib/systemd/system``` where startup services reside.
 
 ```
 sudo mv dotut.service /lib/systemd/system
@@ -396,13 +390,13 @@ We must now reload the list services by running
 ```
 sudo systemctl daemon reload
 ```
-Our service is not aware of boot,so we need to activate it so the ```systemctl``` can start it automatically on boot
+Our service is not aware of boot,so we need to activate it so that```systemctl``` can start it automatically on boot
 
 ```
 sudo systemctl enable dotut
 ```
 
-To test,```sudo reboot``` your system then go to ```<^>your_server_ip<^>:8000/all``` using your favorite
+To test, ```sudo reboot``` your system then go to ```<^>your_server_ip<^>:8000/all``` using your favorite
 web browser.Your should get a json response 
 ```
 {
@@ -411,7 +405,7 @@ web browser.Your should get a json response
 ```
 
 ## Step 4 — Expose public port
-As you can see,our app is expose via port ``` :8000```. When need reverse proxy which will expose port ```:80```.
+As you can see,our app is exposed via port ``` :8000```. When need reverse proxy that will expose port ```:80```.
 
 ```
 sudo nano /etc/nginx/sites-enabled/default
@@ -433,11 +427,11 @@ Save and close the file the restart Nginx
 sudo service nginx restart
 ```
 
-With Nginx reverse set up,each API route can be accessed via port ```:80```
+With Nginx reverse proxy set up,each API route can now be accessed via port ```:80```
 
 ## Step 4 — Testing
 
-Using a web browser,pass any api route as 
+Using a web browser,pass any API route as 
 
 ```
 http://<^>your_ip_address<^>/all
@@ -451,35 +445,6 @@ passing the neccassary routes parameters.
 
 ## Conclusion
 
-Go makes building a REST API server very easy. In less than 200 lines of code,we have accomplished to write a 
-fully fledge REST API server with all CRUD and logging operations. We have also leveraged the use of services
-and reverse proxying to make our API endpoints accessible.
+Go makes building a REST API server very easy. In less than 200 lines of code,we have accomplished to write a full-fledged REST API server with all CRUD and logging operations. We have also leveraged the use of services and reverse proxying to make our API endpoints accessible.
 
-You can get the full source code [here](https://github.com/daviddexter/do-rest-tut.git)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
-
-
-
-
-
+You can get the full source code [**here on github**](https://github.com/daviddexter/do-rest-tut.git)
