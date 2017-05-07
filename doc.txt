@@ -98,7 +98,10 @@ export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
  This should output the correctly set ```GOROOT`` and ```GOPATH``` paths.
 
- ## Step 1 — Building the server
+ ## Step 2 — Building the app
+
+ Our app will expose simple CRUD routes. 
+
  Lets create a directory inside ```~/goapp/src``` which will be our app directory. We will name our folder ```rest```
 
  ```command
@@ -113,7 +116,363 @@ export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
  touch main.go
  sudo nano main.go
  ```
-  
+First we begin by settting up the usuall go app structure and importing important third-party libraries
+
+ ```
+ package main
+
+ import (
+	"database/sql"
+	"fmt"
+	"net/http"
+	"os"
+	"encoding/json"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	_ "github.com/mattn/go-sqlite3"
+)
+
+func main(){}
+
+```
+
+As you can see,our app uses three third-party libraries. At the moment,Go has no knowledge of them so we need to 
+download them. Thankfully Go has an excellent way of downloading third-party libraries. We do that by running
+
+```command
+go get github.com/gorilla/handlers
+go get github.com/gorilla/mux
+go get github.com/mattn/go-sqlite3
+
+```
+<$>[note]
+Remember to Save and quite from nano before installing the libraries
+<$>
+
+With the libraries installed,re-open ```main.go```
+
+Lets edit the ```main()``` function
+
+```
+func main() {
+	router := mux.NewRouter()
+	indexH := http.HandlerFunc(fetchAllHandler)
+	newH := http.HandlerFunc(newHandler)
+	updateH := http.HandlerFunc(updateHandler)
+	getH := http.HandlerFunc(getHandler)
+	deleteH := http.HandlerFunc(deleteHandler)
+	logFile, err := os.OpenFile(LOGS, os.O_RDONLY|os.O_CREATE|os.O_APPEND, 0666)
+	errorChecker(err)
+	router.Handle("/all", handlers.LoggingHandler(logFile, indexH))
+	router.Handle("/new/{firstname}/{lastname}/{title}/{salary}", handlers.LoggingHandler(logFile, newH))
+	router.Handle("/update/{id}/{firstname}/{lastname}/{title}/{salary}", handlers.LoggingHandler(logFile, updateH))
+	router.Handle("/get/{id}", handlers.LoggingHandler(logFile, getH))
+	router.Handle("/delete/{id}", handlers.LoggingHandler(logFile, deleteH))
+	server := http.Server{
+		Addr:    ":8000",
+		Handler: router,
+	}
+	fmt.Println("Listening at ...")
+	server.ListenAndServe()
+}
+
+```
+
+Our server defines five routes which handle incoming requests. Each attached to their respective handlers.
+
+``` 
+router.Handle("/all", handlers.LoggingHandler(logFile, indexH))
+router.Handle("/new/{firstname}/{lastname}/{title}/{salary}", handlers.LoggingHandler(logFile, newH))
+router.Handle("/update/{id}/{firstname}/{lastname}/{title}/{salary}", handlers.LoggingHandler(logFile, updateH))
+router.Handle("/get/{id}", handlers.LoggingHandler(logFile, getH))
+router.Handle("/delete/{id}", handlers.LoggingHandler(logFile, deleteH)) 
+```
+
+``` "/all"``` route is responsible for fetching all records.
+``` "/new"``` route is responsible for create new records.
+```"/update"``` route is reponsible for updating a specific record.
+```"/get"``` route is reponsible for fetching data of a specific record.
+```"/delete"``` route is reponsible for deleting a record.
+
+Now lets add the handlers for each route
+
+```
+func rowsCount() (count int) {
+	rows, err := DB.Query("SELECT COUNT(*) as count FROM people")
+	errorChecker(err)
+	for rows.Next() {
+		rows.Scan(&count)
+	}
+	return count
+}
+func fetchAllHandler(w http.ResponseWriter, r *http.Request) {
+	if numRows := rowsCount(); numRows <= 0 {
+		d, _ := json.MarshalIndent(ResponseBox{Hint: "Empty Database"}, "", " ")
+		fmt.Fprint(w, string(d))
+	} else {
+		rows, err := DB.Query("SELECT * FROM people")
+		errorChecker(err)
+		var result []DataObj
+		for rows.Next() {
+			item := DataObj{}
+			err := rows.Scan(&item.Data.Id, &item.Data.Firstname, &item.Data.Lastname, &item.Data.Position.Title, &item.Data.Position.Salary)
+			errorChecker(err)
+			result = append(result, item)
+		}
+		d, _ := json.MarshalIndent(result, "", " ")
+		fmt.Fprint(w, string(d))
+	}
+
+}
+
+func newHandler(w http.ResponseWriter, r *http.Request) {
+	items := mux.Vars(r)
+	stmt, err := DB.Prepare("INSERT INTO people (firstname,lastname,title,salary) VALUES(?,?,?,?)")
+	errorChecker(err)
+	stmt.Exec(items["firstname"], items["lastname"], items["title"], items["salary"])
+	d, _ := json.MarshalIndent(ResponseBox{Hint: "New person added"}, "", " ")
+	fmt.Fprint(w, string(d))
+}
+
+func updateHandler(w http.ResponseWriter, r *http.Request) {
+	items := mux.Vars(r)
+	stmt, err := DB.Prepare("UPDATE people SET firstname=?,lastname=?,title=?,salary=? WHERE id=?")
+	errorChecker(err)
+	stmt.Exec(items["firstname"], items["lastname"], items["title"], items["salary"], items["id"])
+	d, _ := json.MarshalIndent(ResponseBox{Hint: "Person updated"}, "", " ")
+	fmt.Fprint(w, d)
+}
+
+func getHandler(w http.ResponseWriter, r *http.Request) {
+	items := mux.Vars(r)
+	var result []DataObj
+	item := DataObj{}
+	err := DB.QueryRow("SELECT * FROM people WHERE id=?", items["id"]).Scan(&item.Data.Id, &item.Data.Firstname, &item.Data.Lastname, &item.Data.Position.Title, &item.Data.Position.Salary)
+	switch {
+	case err == sql.ErrNoRows:
+		d, _ := json.MarshalIndent(ResponseBox{Hint: "No user with that ID."}, "", " ")
+		fmt.Fprint(w, string(d))
+	case err != nil:
+		errorChecker(err)
+	default:
+		result = append(result, item)
+		d, _ := json.MarshalIndent(result, "", " ")
+		fmt.Fprint(w, string(d))
+	}
+}
+
+func deleteHandler(w http.ResponseWriter, r *http.Request) {
+	items := mux.Vars(r)
+	stmt, err := DB.Prepare("DELETE FROM people WHERE id=?")
+	errorChecker(err)
+	stmt.Exec(items["id"])
+	d, _ := json.MarshalIndent(ResponseBox{Hint: "Person deleted"}, "", " ")
+	fmt.Fprint(w, string(d))
+}
+
+```
+
+Great as you can see, our server defines an ```errorChecker()``` function which is reponsible for catching errors.Lets
+add it.
+
+```
+func errorChecker(e error) {
+	if e != nil {		
+		panic(e)
+	}
+}
+```
+
+The app has functional structures,now we need to add data structure and variable that the functions use. Add the
+follow code.
+
+```
+const (
+	DBNAME = "app.db"
+	LOGS   = "server.log"
+)
+
+var DB *sql.DB
+
+type Person struct {
+	Id        string `json:id`
+	Firstname string `json:firstname`
+	Lastname  string `json:lastname`
+	Position  Job    `json:job,omitempty`
+}
+
+type Job struct {
+	Title  string `json:title`
+	Salary int32  `json:salary,omitempty`
+}
+
+type DataObj struct {
+	Data Person
+}
+
+type ResponseBox struct {
+	Hint string `json:hint`
+}
+```
+
+Wonderful. Let the an ```init()``` function which will initialize our app.
+
+```
+func init() {
+	db, err := sql.Open("sqlite3", DBNAME)
+	errorChecker(err)
+	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS people (id INTEGER PRIMARY KEY AUTOINCREMENT,firstname TEXT,lastname TEXT,title TEXT,salary INTERGER)")
+	errorChecker(err)
+	stmt.Exec()
+	DB = db
+
+}
+
+```
+
+Before we continue to the next step,we need to understand what our app does.
+
+Before the ```main()``` function is called, ```init()``` starts by opening a SQLite database and create a ```people```
+table which is used to store an individuals information. On succuss, it set the variable ```DB``` to be an instance
+of the database so that it can be accessed globally. The ```main()``` function is then called which registers all routes,
+handlers and starts a server that listens at port ``` :8000```. It always creates a ```logFile``` which is used
+by middleware handler function to write request logs. Handlers essentiall access the database and return their response
+in JSON.
+
+Great. The app is done.
+
+## Step 3 — Automating deployment
+For our app to run, we have to run ```go run main.go``` everytime. This is obviously not ideal. We need a may to start
+the app automatically exposing its functions. To accompolish this,we will first need to create a bash script that we be
+responsible for calling the Go app.
+
+```
+touch app.sh
+sudo nano app.sh
+```
+Add the following code;
+
+```
+#!/bin/sh
+for i in *
+do 
+    case $i in
+    main.go)        
+        go run $i
+        break
+        ;;    
+    esac        
+done
+```
+The script basically reads the current working directory,finds the ```main.go``` file and run the command to start it.
+
+Next, we need to create a service that we start the app after boot.
+
+```
+touch dotut.service
+sudo nano dotut.service
+```
+Add the following code;
+
+```
+[Unit]
+Description = Digital Ocean Web App service
+
+[Service]
+ExecStart=/home/goapp/src/rest/app.sh
+
+[Install]
+WantedBy = multi-user.target
+
+```
+Now we need to move the service file into ``` /lib/systemd/system``` where startup services live.
+
+```
+sudo mv dotut.service /lib/systemd/system
+```
+
+We must now reload the list services by running
+
+```
+sudo systemctl daemon reload
+```
+Our service is not aware of boot,so we need to activate it so the ```systemctl``` can start it automatically on boot
+
+```
+sudo systemctl enable dotut
+```
+
+To test,```sudo reboot``` your system then go to ```<^>your_server_ip<^>:8000/all``` using your favorite
+web browser.Your should get a json response 
+```
+{
+    Hint : "Empty database"
+}
+```
+
+## Step 4 — Expose public port
+As you can see,our app is expose via port ``` :8000```. When need reverse proxy which will expose port ```:80```.
+
+```
+sudo nano /etc/nginx/sites-enabled/default
+```
+Edit the ```server_name``` declaration to match the IP address of your droplet.
+
+Next,find the ```/location``` declaration and replace its content with:
+
+```
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $remote_addr;
+proxy_set_header Host $host;
+proxy_pass http://127.0.0.1:80;
+```
+
+Save and close the file the restart Nginx
+
+```
+sudo service nginx restart
+```
+
+With Nginx reverse set up,each API route can be accessed via port ```:80```
+
+## Step 4 — Testing
+
+Using a web browser,pass any api route as 
+
+```
+http://<^>your_ip_address<^>/all
+http://<^>your_ip_address<^>/new/sammy/shark/writer/1000
+http://<^>your_ip_address<^>/get/1
+http://<^>your_ip_address<^>/update/1/shark/sammy/community/2000
+http://<^>your_ip_address<^>/delete/1
+```
+The above should return JSON formatted response.The test can also be carried by ```htttpie``` or ```curl``` just by
+passing the neccassary routes parameters.
+
+## Conclusion
+
+Go makes building a REST API server very easy. In less than 200 lines of code,we have accomplished to write a 
+fully fledge REST API server with all CRUD and logging operations. We have also leveraged the use of services
+and reverse proxying to make our API endpoints accessible.
+
+You can get the full source code [here](https://github.com/daviddexter/do-rest-tut.git)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -2,4 +2,7 @@
 Description = Digital Ocean Web App service
 
 [Service]
-ExecStart=/home/goapp/src/api/main.go
+ExecStart=/home/goapp/src/rest/app.sh
+
+[Install]
+WantedBy = multi-user.target

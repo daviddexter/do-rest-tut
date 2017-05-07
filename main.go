@@ -115,8 +115,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 
 func errorChecker(e error) {
 	if e != nil {
-		//panic(e)
-		fmt.Println(e)
+		panic(e)
 	}
 }
 
